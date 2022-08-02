@@ -3,6 +3,7 @@ import os
 import json
 import pandas as pd
 import warnings
+from tqdm import tqdm
 warnings.filterwarnings('ignore')
 
 def delete_first_line(QAs_path):
@@ -19,28 +20,29 @@ def generate_multi_turn_files(args):
     input_path = args.input_path
     file_list = os.listdir(input_path) #input_path 내의 파일 목록을 받아옴
 
-    QAs = pd.DataFrame(columns=["q","a"]) #질문 q와 그에 따른 응답 a를 쌍으로 담는 데이터프레임 QAs
+    sentences = []                        #[q,a]들을 원소로 가지는 2차원 리스트 sentences
     ids = []                              #QA 질문 쌍이 같은 대화 뭉치에서 나왔는지를 구분하는 리스트 ids
 
     #json 파일별 utterance 추출
-    idx = 0
-    for file_name in file_list:
+    id = 0
+    for file_name in tqdm(file_list):
         if file_name[-5:] != ".json": continue              #json 파일이 아니면 pass
         file_path = input_path + '/' + file_name
         with open(file_path, 'r', encoding='utf-8-sig') as f:
             json_data = json.load(f)
-        try:
-            utterances = [data[-1]['utterance'] for data in json_data]
-        except:
-            utterances = [data[-1]['utterence'] for data in json_data]  #json 파일 중 utterance가 utterence로 오타난 경우가 있어 예외 처리
-        sentences = []
-        for i in range(0, len(utterances)-2):
-            if " " in utterances[i:i+3] or "" in utterances[i:i+3]: continue    #빈 문장이 있으면 pass
-            sentences.extend([{'q': utterances[i], 'a': utterances[i+1]}, {'q': utterances[i+2], 'a': ""}])
-            ids.extend(['id_'+str(idx)]*2)
-            idx+=1
-        QAs = QAs.append(sentences, ignore_index=True)
+        length = len(json_data)
+        for idx in range(2, length):
+            try:
+                utterances = [data['utterance'].strip() for data in json_data[idx]]
+            except:
+                utterances = [data['utterence'].strip() for data in json_data[idx]]  #json 파일 중 utterance가 utterence로 오타난 경우가 있어 예외 처리
+            if "" in utterances: continue                                            #빈 문장이 있으면 pass
+            sentences.extend([[utterances[0], utterances[1]], [utterances[2], ""]]) #[q1, a1], [q2, empty]의 three turn 발화 구성
+            ids.extend(['id_'+str(id)]*2)                                           #같은 발화에서 나온 qa 쌍의 경우 같은 id를 같도록 2개의 같은 id를 ids에 추가
+            id+=1          
         f.close()
+
+    QAs = pd.DataFrame(sentences, columns=["q","a"])    #질문 q와 그에 따른 응답 a를 쌍으로 담는 데이터프레임 QAs
     
     #QAs를 tsv파일로 추출
     QAs_path = args.output_path + '/' + args.qas_name
