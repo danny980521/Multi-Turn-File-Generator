@@ -18,9 +18,6 @@ def delete_first_line(QAs_path):
         f2.close()
 
 def generate_multi_turn_files(args):
-    sentences = []                        #[q,a]들을 원소로 가지는 2차원 리스트 sentences
-    ids = []                              #QA 질문 쌍이 같은 대화 뭉치에서 나왔는지를 구분하는 리스트 ids
-
     all_files = []
     input_path = args.input_path
     dir_list = os.listdir(input_path) #input_path 내의 디렉토리 목록을 받아옴
@@ -35,8 +32,8 @@ def generate_multi_turn_files(args):
 
     #all_files를 train, vaild, test용으로 나누기
     num_all_files = len(all_files)
-    num_train_files = num_all_files*args.train_ratio//(args.train_ratio+args.val_ratio+args.test_ratio)
-    num_valid_files = (num_all_files-num_train_files)*args.val_ratio//(args.val_ratio+args.test_ratio)
+    num_train_files = int(num_all_files*args.train_ratio/(args.train_ratio+args.val_ratio+args.test_ratio))
+    num_valid_files = int((num_all_files-num_train_files)*args.val_ratio/(args.val_ratio+args.test_ratio))
     random.shuffle(all_files)
     train_files = all_files[:num_train_files]
     valid_files = all_files[num_train_files:num_train_files+num_valid_files]
@@ -46,6 +43,8 @@ def generate_multi_turn_files(args):
     
     #train, vaild, test별 utterance 추출
     for idx, file_list in enumerate(splited_file_list):
+        sentences = []                        #[q,a]들을 원소로 가지는 2차원 리스트 sentences
+        ids = []                              #QA 질문 쌍이 같은 대화 뭉치에서 나왔는지를 구분하는 리스트 ids
         id = 0
         for file_path in tqdm(file_list):
             with open(file_path, 'r', encoding='utf-8-sig') as f:
