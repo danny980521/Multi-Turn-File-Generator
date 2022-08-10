@@ -53,8 +53,8 @@ def generate_multi_turn_files(args):
                 utterances = [data['utterance'].strip() for data in json_data]
             except:
                 utterances = [data['utterence'].strip() for data in json_data]  #json 파일 중 utterance가 utterence로 오타난 경우가 있어 예외 처리
-            if "" in utterances: continue                                       #빈 문장이 있는 대화 pass
             len_utter = len(utterances)
+            if len_utter < 2 or "" in utterances: continue                      #대화의 수가 2미만이거나 빈 문장이 있는 대화 pass
             for i in range(0, len_utter-1, 2):
                 sentences.append({'q': utterances[i], 'a': utterances[i+1]})
                 ids.append('id_'+str(id))
